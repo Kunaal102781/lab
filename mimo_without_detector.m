@@ -1,56 +1,53 @@
-% Rayleigh fading channel with Alamouti Space Time Block Coding
-% Two transmit antenna, Two Receive antenna
 
-% clear
 N = 10^6; % number of bits or symbols
 Eb_N0_dB = [0:30]; % multiple Eb/N0 values
 nRx = 2;
 for ii = 1:length(Eb_N0_dB)
 
-    % Transmitter
-    ip = rand(1,N)>0.5; % generating 0,1 with equal probability
+    
+    ip = rand(1,N)>0.5; 
     s = 2*ip-1; % BPSK modulation 0 -> -1; 1 -> 0
 
-    % Alamouti STBC 
+    
     sCode = 1/sqrt(2)*kron(reshape(s,2,N/2),ones(1,2)) ;
 
-    % channel
-    h = 1/sqrt(2)*[randn(nRx,N) + j*randn(nRx,N)]; % Rayleigh channel
-    n = 1/sqrt(2)*[randn(nRx,N) + j*randn(nRx,N)]; % white gaussian noise, 0dB variance
+    
+    h = 1/sqrt(2)*[randn(nRx,N) + j*randn(nRx,N)]; 
+    n = 1/sqrt(2)*[randn(nRx,N) + j*randn(nRx,N)]; 
 
     y = zeros(nRx,N);
     yMod = zeros(nRx*2,N);
     hMod = zeros(nRx*2,N);
     for kk = 1:nRx
 
-        hMod = kron(reshape(h(kk,:),2,N/2),ones(1,2)); % repeating the same channel for two symbols    
+        hMod = kron(reshape(h(kk,:),2,N/2),ones(1,2)); 
         hMod = kron(reshape(h(kk,:),2,N/2),ones(1,2));
         temp = hMod;
         hMod(1,[2:2:end]) = conj(temp(2,[2:2:end])); 
         hMod(2,[2:2:end]) = -conj(temp(1,[2:2:end]));
 
-        % Channel and noise Noise addition
+        
         y(kk,:) = sum(hMod.*sCode,1) + 10^(-Eb_N0_dB(ii)/20)*n(kk,:);
 
-        % Receiver
+        
         yMod([2*kk-1:2*kk],:) = kron(reshape(y(kk,:),2,N/2),ones(1,2));
     
-        % forming the equalization matrix
+        
         hEq([2*kk-1:2*kk],:) = hMod;
         hEq(2*kk-1,[1:2:end]) = conj(hEq(2*kk-1,[1:2:end]));
         hEq(2*kk,  [2:2:end]) = conj(hEq(2*kk,  [2:2:end]));
 
     end
 
-    % equalization 
+
     hEqPower = sum(hEq.*conj(hEq),1);
-    yHat = sum(hEq.*yMod,1)./hEqPower; % [h1*y1 + h2y2*, h2*y1 -h1y2*, ... ]
+    yHat = sum(hEq.*yMod,1)./hEqPower;
     yHat(2:2:end) = conj(yHat(2:2:end));
 
-    % receiver - hard decision decoding
+
     ipHat = real(yHat)>0;
 
-    % counting the errors
+
     nErr(ii) = size(find([ip- ipHat]),2);
 
 end
